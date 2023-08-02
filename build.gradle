@@ -14,6 +14,10 @@ java {
 
 repositories {
 	mavenCentral()
+	mavenLocal()
+	maven { url "https://repo.spring.io/snapshot" }
+	maven { url "https://repo.spring.io/milestone" }
+	maven { url "https://repo.spring.io/release" }
 }
 
 ext {
@@ -25,6 +29,10 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+
+	testImplementation 'org.spockframework:spock-core:2.4-M1-groovy-4.0'
+	testImplementation 'org.spockframework:spock-spring:2.4-M1-groovy-4.0'
+
 	testImplementation 'org.testcontainers:junit-jupiter'
 }
 
@@ -33,15 +41,54 @@ dependencyManagement {
 		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
 	}
 }
-
-tasks.named('contractTest') {
-	useJUnitPlatform()
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
-}
+//
+//tasks.named('contractTest') {
+//	useJUnitPlatform()
+//}
+//
+//tasks.named('test') {
+//	useJUnitPlatform()
+//}
 
 contracts {
+//	contractsDslDir = file("src/test/resources/contracts.evenOdd")
+	testFramework = "SPOCK"
+	packageWithBaseClasses = 'io.beinspired'
+	baseClassForTests = "io.beinspired.springcloudcontractsample.BaseTestClass"
 }
 
+contractTest {
+	useJUnitPlatform()
+	testLogging {
+		exceptionFormat = 'full'
+	}
+	afterSuite { desc, result ->
+		if (!desc.parent) {
+			println "Results: (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+			boolean skipTests = Boolean.parseBoolean(project.findProperty('SKIP_TESTS') ?: "false")
+			if (result.testCount == 0 && !skipTests) {
+				throw new IllegalStateException("No tests were found. Failing the build")
+			}
+		}
+	}
+}
+//
+//publishing {
+//	publications {
+//		mavenJava(MavenPublication) {
+//			artifact bootJar
+//
+//			artifact verifierStubsJar
+//
+//			// https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/273
+//			versionMapping {
+//				usage("java-api") {
+//					fromResolutionOf("runtimeClasspath")
+//				}
+//				usage("java-runtime") {
+//					fromResolutionResult()
+//				}
+//			}
+//		}
+//	}
+//}
